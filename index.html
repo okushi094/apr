@@ -528,14 +528,14 @@
 
             // Send to AIボタンのクリックイベント
             sendToAIButton.addEventListener('click', async () => {
-                const userText = currentTranscript.trim(); // 確定されたユーザーの発言
+                const userText = transcriptTextarea.value.trim(); // ユーザーの発言（自動送信の場合、currentTranscriptは既にクリアされているためテキストエリアから取得）
                 if (!userText) {
                     statusMessage.textContent = 'AIに送るテキストがありません。';
                     statusMessage.className = 'status-message error';
                     return;
                 }
 
-                // AIに送信する前に、テキストエリアをクリアし、ユーザーの発言とローディングメッセージを表示
+                // AIに送信する前に、ユーザーの発言とローディングメッセージを表示
                 transcriptTextarea.value = userText + '\n\nAIが応答中...';
                 currentTranscript = ''; // 送信後、次のユーザー入力のためにクリア
 
@@ -564,6 +564,7 @@
                         };
 
                         const apiKey = ""; // APIキーはCanvasによって自動的に提供されます
+                        // Llama APIのエンドポイントに置き換える場合はここを変更します
                         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
                         const response = await fetch(apiUrl, {
