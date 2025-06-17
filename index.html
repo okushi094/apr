@@ -7,40 +7,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8; /* Light background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        html, body {
+            height: 100%; /* HTMLとbodyがビューポートの高さを最大限に占めるように設定 */
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            overflow-x: hidden; /* 横方向のスクロールバーを非表示にする */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* 背景色 */
+            display: flex; /* デスクトップでの中央寄せに利用 */
+            justify-content: center; /* デスクトップでの中央寄せに利用 */
+            align-items: center; /* デスクトップでの中央寄せに利用 */
+            min-height: 100vh; /* bodyがビューポートの高さを少なくとも満たすように */
             color: #1a202c;
-            overflow: hidden; /* Prevent body scroll */
         }
         .app-container {
             background-color: #ffffff;
-            border-radius: 36px; /* Rounded corners for phone-like shape */
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+            border-radius: 36px; /* デスクトップでのスマホ風の角丸 */
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15); /* デスクトップでの影 */
             width: 100%;
-            max-width: 400px; /* Typical phone width */
-            height: 100vh; /* Full height on small screens */
-            max-height: 800px; /* Max height for larger screens */
+            max-width: 600px; /* デスクトップでの最大幅 */
+            height: 100%; /* 親要素(body)の高さに合わせる */
+            max-height: 900px; /* デスクトップでの最大高さ */
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Hide scrollbars within container */
+            overflow-y: auto; /* コンテナ内で縦方向のスクロールを許可 */
+            box-sizing: border-box; /* パディングとボーダーを幅と高さに含める */
         }
 
-        /* Top Header */
+        /* ヘッダー */
         .header {
             padding: 20px 25px 15px;
             display: flex;
             align-items: center;
-            justify-content: center; /* Center the title */
+            justify-content: center; /* タイトルを中央に配置 */
             border-bottom: 1px solid #f0f4f8;
             position: relative;
+            flex-shrink: 0; /* ヘッダーが縮まないようにする */
         }
         .header .title {
             font-size: 1.1rem;
@@ -49,15 +53,14 @@
             text-align: center;
         }
 
-        /* Main Content Area */
+        /* メインコンテンツエリア */
         .main-content {
-            flex-grow: 1;
-            padding: 25px;
+            flex-grow: 1; /* 利用可能なスペースを占める */
+            padding: 30px; /* パディングを増やす */
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
-            overflow-y: auto; /* Allow scrolling for text area */
+            gap: 25px; /* 要素間の間隔を増やす */
         }
         .profile-section {
             display: flex;
@@ -66,6 +69,7 @@
             width: 100%;
             justify-content: flex-start;
             margin-bottom: 10px;
+            flex-shrink: 0;
         }
         .profile-icon {
             width: 32px;
@@ -76,6 +80,7 @@
             align-items: center;
             justify-content: center;
             color: #4a5568;
+            flex-shrink: 0;
         }
         .profile-icon svg {
             width: 20px;
@@ -87,12 +92,13 @@
             color: #1a202c;
             text-align: left;
             width: 100%;
+            flex-shrink: 0;
         }
 
-        /* Sound Wave Visualizer */
+        /* サウンドウェーブビジュアライザー */
         .sound-wave-visualizer {
-            width: 150px;
-            height: 150px;
+            width: 180px; /* サイズを拡大 */
+            height: 180px;
             background-color: #f0f4f8;
             border-radius: 50%;
             display: flex;
@@ -102,15 +108,16 @@
             margin-bottom: 30px;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
             position: relative;
+            flex-shrink: 0;
         }
         .sound-wave-visualizer svg {
-            color: #a0aec0; /* Grey color for inactive wave */
-            width: 80px;
-            height: 80px;
+            color: #a0aec0; /* 非アクティブ時のグレー */
+            width: 100px; /* アイコンサイズを拡大 */
+            height: 100px;
             transition: color 0.3s ease;
         }
         .sound-wave-visualizer.active svg {
-            color: #6366f1; /* Blue for active wave */
+            color: #6366f1; /* アクティブ時の青 */
             animation: wave-pulse 1.5s infinite ease-out;
         }
         @keyframes wave-pulse {
@@ -118,7 +125,7 @@
             50% { transform: scale(1.0); opacity: 1; }
         }
 
-        /* Stop Button (Large Red) */
+        /* 停止ボタン (大型の赤) */
         .stop-button-large {
             background-color: #ef4444;
             color: white;
@@ -130,10 +137,11 @@
             cursor: pointer;
             box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
             transition: all 0.3s ease;
-            width: 80%; /* Adjusted width */
-            max-width: 250px;
+            width: 90%; /* 幅を広げる */
+            max-width: 300px; /* 最大幅を拡大 */
             margin-bottom: 20px;
-            display: none; /* Hidden by default */
+            display: none; /* デフォルトで非表示 */
+            flex-shrink: 0;
         }
         .stop-button-large:hover {
             background-color: #dc2626;
@@ -148,10 +156,10 @@
             transform: none;
         }
 
-        /* Textarea */
+        /* テキストエリア */
         textarea {
             width: 100%;
-            min-height: 150px;
+            min-height: 150px; /* 最小高さを調整 */
             padding: 15px;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
@@ -161,20 +169,22 @@
             resize: vertical;
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
             transition: border-color 0.3s ease;
+            flex-grow: 1; /* メインコンテンツ内で拡大・縮小可能にする */
         }
         textarea:focus {
             outline: none;
             border-color: #6366f1;
         }
 
-        /* Action Buttons (Record, Save) */
+        /* アクションボタン (録音, AIへ送信) */
         .action-buttons {
             display: flex;
-            justify-content: center; /* Center buttons horizontally */
+            justify-content: center; /* ボタンを水平中央に配置 */
             align-items: center;
             width: 100%;
             margin-top: 20px;
             gap: 15px;
+            flex-shrink: 0;
         }
         .action-btn {
             background-color: #ffffff;
@@ -191,8 +201,8 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            flex: 1; /* Distribute space evenly */
-            max-width: 150px; /* Limit button width */
+            flex: 1; /* スペースを均等に分配 */
+            max-width: 150px; /* ボタンの最大幅を制限 */
         }
         .action-btn:hover {
             background-color: #f0f4f8;
@@ -212,17 +222,18 @@
             color: #4a5568;
         }
 
-        /* Bottom Navigation Bar */
+        /* 下部ナビゲーションバー */
         .bottom-nav {
             background-color: #ffffff;
             border-top: 1px solid #f0f4f8;
             padding: 10px 0;
             display: flex;
-            justify-content: center; /* Center the single nav item */
+            justify-content: center; /* 単一のナビアイテムを中央に配置 */
             align-items: center;
             box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.05);
-            border-bottom-left-radius: 36px; /* Match container border radius */
+            border-bottom-left-radius: 36px; /* コンテナの角丸に合わせる */
             border-bottom-right-radius: 36px;
+            flex-shrink: 0;
         }
         .nav-item {
             display: flex;
@@ -230,13 +241,13 @@
             align-items: center;
             gap: 3px;
             cursor: pointer;
-            color: #a0aec0; /* Inactive color */
+            color: #a0aec0; /* 非アクティブ時の色 */
             font-size: 0.75rem;
             font-weight: 500;
             transition: color 0.2s ease;
         }
         .nav-item.active {
-            color: #ef4444; /* Active color (red) */
+            color: #ef4444; /* アクティブ時の色 (赤) */
         }
         .nav-item svg {
             width: 24px;
@@ -247,7 +258,7 @@
             color: #ef4444;
         }
 
-        /* Status message */
+        /* ステータスメッセージ */
         .status-message {
             font-size: 0.85rem;
             padding: 10px 15px;
@@ -256,6 +267,7 @@
             font-weight: 500;
             width: 100%;
             text-align: center;
+            flex-shrink: 0;
         }
         .status-message.info {
             background-color: #e0f2fe;
@@ -270,29 +282,71 @@
             color: #16a34a;
         }
 
-        /* Responsive adjustments for very small screens */
-        @media (max-width: 360px) {
+        /* スマートフォンなどの小さな画面向けのレスポンシブ調整 */
+        @media (max-width: 768px) { /* 一般的なスマートフォンの画面幅に合わせる */
+            body {
+                display: block; /* Flexboxの中央寄せを解除し、ブロック表示に */
+                padding: 0; /* bodyのパディングをなくす */
+                margin: 0; /* bodyのマージンをなくす */
+                overflow-y: auto; /* 必要に応じてbody全体でスクロールを許可 */
+            }
             .app-container {
-                border-radius: 0; /* No border radius on very small screens to fit */
-                height: 100vh;
+                border-radius: 0; /* 画面端まで広がるように角丸をなくす */
+                max-width: unset; /* 最大幅の制限を解除 */
+                min-height: 100vh; /* 画面の高さを満たすように */
+                height: auto; /* コンテンツに合わせて高さを自動調整 */
+                max-height: unset; /* 最大高さの制限を解除 */
+                box-shadow: none; /* 影をなくす */
+                width: 100vw; /* ビューポートの幅いっぱいに広げる */
             }
             .header {
-                padding: 15px 20px 10px;
+                padding: 15px 20px 10px; /* パディングを削減 */
+            }
+            .header .title {
+                font-size: 1rem; /* タイトルフォントを小さく */
             }
             .main-content {
-                padding: 20px;
+                padding: 20px; /* パディングを削減 */
+                gap: 15px; /* 要素間の間隔を削減 */
+            }
+            .sound-wave-visualizer {
+                width: 140px; /* モバイル向けに少し小さく */
+                height: 140px;
+                margin-top: 15px;
+                margin-bottom: 20px;
+            }
+            .sound-wave-visualizer svg {
+                width: 80px; /* モバイル向けに少し小さく */
+                height: 80px;
             }
             .stop-button-large {
                 padding: 15px 30px;
                 font-size: 1.1rem;
+                width: 90%; /* 小さな画面で幅を広げる */
+                max-width: unset;
+            }
+            textarea {
+                min-height: 100px; /* モバイル向けに最小高さを調整 */
+                padding: 12px;
+                font-size: 0.95rem;
+            }
+            .action-buttons {
+                margin-top: 15px;
+                gap: 10px;
             }
             .action-btn {
                 padding: 10px 15px;
                 font-size: 0.9rem;
+                border-radius: 10px;
             }
             .action-btn svg {
                 width: 18px;
                 height: 18px;
+            }
+            .bottom-nav {
+                padding: 8px 0; /* パディングを削減 */
+                border-bottom-left-radius: 0; /* 角丸をなくす */
+                border-bottom-right-radius: 0;
             }
             .nav-item {
                 font-size: 0.7rem;
@@ -301,19 +355,21 @@
                 width: 20px;
                 height: 20px;
             }
-            textarea {
-                min-height: 120px;
-                font-size: 0.9rem;
+            .status-message {
+                font-size: 0.8rem;
+                padding: 8px 12px;
             }
         }
     </style>
 </head>
 <body>
     <div class="app-container">
+        <!-- Header -->
         <div class="header">
             <span class="title">音声文字起こしアプリ</span>
         </div>
 
+        <!-- Main Content -->
         <div class="main-content">
             <div class="profile-section">
                 <div class="profile-icon">
@@ -328,6 +384,7 @@
                 </svg>
             </div>
 
+            <!-- Large Stop Button - Visible only when recording -->
             <button id="stopButtonLarge" class="stop-button-large">Stop</button>
 
             <textarea id="transcript" placeholder="ここに文字起こしされたテキストが表示されます..." class="shadow-inner"></textarea>
@@ -337,9 +394,11 @@
                     <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.2-3c0 3.53-2.91 6.4-6.2 6.4S4.8 14.53 4.8 11H3c0 4.07 3.06 7.44 7 7.93V22h4v-3.07c3.94-.49 7-3.86 7-7.93h-1.8z"/></svg>
                     Record
                 </button>
-                <button id="saveButton" class="action-btn">
-                    <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l4 4v11a2 2 0 01-2 2zM12 17V9"/></svg>
-                    Save
+                <button id="sendToAIButton" class="action-btn">
+                    <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21.01c-.01 0-.01-.01 0-.01L2 21l.01-.01L19 12 2.01 3l-.01.01C2 3 2 3 2 3.01l7 8-7 8z"/>
+                    </svg>
+                    Send to AI
                 </button>
             </div>
             <p id="status" class="status-message info">準備完了</p>
@@ -357,7 +416,7 @@
         // DOM要素の取得
         const recordButton = document.getElementById('recordButton');
         const stopButtonLarge = document.getElementById('stopButtonLarge');
-        const saveButton = document.getElementById('saveButton');
+        const sendToAIButton = document.getElementById('sendToAIButton'); // IDを更新
         const transcriptTextarea = document.getElementById('transcript');
         const statusMessage = document.getElementById('status');
         const soundWaveVisualizer = document.getElementById('soundWaveVisualizer');
@@ -366,7 +425,8 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         let isRecognizing = false; // 音声認識中かどうかを管理するフラグ
-        let lastFinalTranscript = ''; // 最終確定したテキストを保持するための変数
+        let currentTranscript = ''; // 現在の確定+暫定の文字起こしテキスト
+        let chatHistory = []; // 会話履歴を保持するための配列
 
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
@@ -377,7 +437,7 @@
             // 音声認識が開始されたときのイベント
             recognition.onstart = () => {
                 isRecognizing = true;
-                lastFinalTranscript = transcriptTextarea.value; // 既存のテキストを保持
+                currentTranscript = ''; // 新しい録音の開始時に現在のトランスクリプトをクリア
                 recordButton.style.display = 'none'; // Recordボタンを非表示
                 stopButtonLarge.style.display = 'block'; // Stopボタンを表示
                 soundWaveVisualizer.classList.add('active'); // ビジュアライザーをアクティブに
@@ -388,29 +448,35 @@
             // 音声認識の結果が得られたときのイベント
             recognition.onresult = (event) => {
                 let interimTranscript = '';
-                let tempFinalTranscript = ''; // 今回のイベントで確定した部分
+                let latestFinalSegment = ''; // 今回のイベントで確定した最終セグメント
 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        tempFinalTranscript += transcript;
+                        latestFinalSegment += transcript; // 確定した部分を蓄積
                     } else {
                         interimTranscript += transcript;
                     }
                 }
 
-                // 新しい確定部分があれば、lastFinalTranscriptに追加して改行
-                if (tempFinalTranscript) {
-                    lastFinalTranscript += tempFinalTranscript + '\n';
-                    // 暫定結果は表示しないので、lastFinalTranscriptでテキストエリアを更新
-                    transcriptTextarea.value = lastFinalTranscript;
-                } else {
-                    // 新しい確定部分がない場合、lastFinalTranscriptに現在の暫定結果を結合して表示
-                    // これにより、話している途中の文字がリアルタイムで表示される
-                    transcriptTextarea.value = lastFinalTranscript + interimTranscript;
+                // 新しい確定部分があれば、currentTranscriptに追加
+                if (latestFinalSegment) {
+                    currentTranscript += latestFinalSegment + '\n';
                 }
-
+                
+                // テキストエリアには、確定した発言と現在の暫定的な発言を表示
+                transcriptTextarea.value = currentTranscript + interimTranscript;
                 transcriptTextarea.scrollTop = transcriptTextarea.scrollHeight; // スクロールを一番下へ
+
+                // 自動送信のロジック
+                // latestFinalSegment が確定したセグメントであり、かつ特定のキーワードを含む場合
+                if (latestFinalSegment.includes('めっちゃ左')) {
+                    sendToAIButton.click();
+                } else if (latestFinalSegment.includes('もうちょい左')) {
+                    sendToAIButton.click();
+                } else if (latestFinalSegment.includes('左')) {
+                    sendToAIButton.click();
+                }
             };
 
             // 音声認識が終了したときのイベント
@@ -460,22 +526,87 @@
                 }
             });
 
-            // Saveボタンのクリックイベント (テキストコピー機能)
-            saveButton.addEventListener('click', () => {
-                transcriptTextarea.select();
-                document.execCommand('copy');
-                statusMessage.textContent = 'テキストがコピーされました！';
+            // Send to AIボタンのクリックイベント
+            sendToAIButton.addEventListener('click', async () => {
+                const userText = currentTranscript.trim(); // 確定されたユーザーの発言
+                if (!userText) {
+                    statusMessage.textContent = 'AIに送るテキストがありません。';
+                    statusMessage.className = 'status-message error';
+                    return;
+                }
+
+                // AIに送信する前に、テキストエリアをクリアし、ユーザーの発言とローディングメッセージを表示
+                transcriptTextarea.value = userText + '\n\nAIが応答中...';
+                currentTranscript = ''; // 送信後、次のユーザー入力のためにクリア
+
+                // ボタンを無効化し、ローディングメッセージを表示
+                sendToAIButton.disabled = true;
+                recordButton.disabled = true; // AI処理中は録音も停止
+                statusMessage.textContent = 'AIが応答中...';
+                statusMessage.className = 'status-message info';
+
+                let aiResponse = '';
+
+                // 特定のキーワードに対する応答（より具体的なものから順にチェック）
+                if (userText.includes('めっちゃ左')) {
+                    aiResponse = '5cm';
+                } else if (userText.includes('もうちょい左')) {
+                    aiResponse = '1cm';
+                } else if (userText.includes('左')) {
+                    aiResponse = '3cm';
+                } else {
+                    try {
+                        // ユーザーメッセージを履歴に追加
+                        chatHistory.push({ role: "user", parts: [{ text: userText }] });
+
+                        const payload = {
+                            contents: chatHistory // 会話履歴を送信
+                        };
+
+                        const apiKey = ""; // APIキーはCanvasによって自動的に提供されます
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const result = await response.json();
+
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            aiResponse = result.candidates[0].content.parts[0].text;
+                        } else {
+                            aiResponse = '(AIからの応答がありませんでした)';
+                            console.error('AI response error:', result);
+                        }
+
+                    } catch (error) {
+                        console.error('Error sending instruction to AI:', error);
+                        aiResponse = '(AIへの指示送信中にエラーが発生しました)';
+                    }
+                }
+                
+                // AI応答を履歴に追加
+                chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+
+                // AI応答をテキストエリアに追加表示
+                transcriptTextarea.value = userText + '\n\nAI: ' + aiResponse;
+                transcriptTextarea.scrollTop = transcriptTextarea.scrollHeight; // スクロールを一番下へ
+
+                statusMessage.textContent = 'AI応答完了！';
                 statusMessage.className = 'status-message success';
-                setTimeout(() => {
-                    statusMessage.textContent = '準備完了';
-                    statusMessage.className = 'status-message info';
-                }, 2000);
+                
+                sendToAIButton.disabled = false;
+                recordButton.disabled = false; // ボタンを再度有効化
             });
 
         } else {
             recordButton.disabled = true;
             stopButtonLarge.disabled = true;
-            saveButton.disabled = true;
+            sendToAIButton.disabled = true;
             statusMessage.textContent = 'お使いのブラウザはWeb Speech APIをサポートしていません。Google Chromeなどの最新ブラウザをご利用ください。';
             statusMessage.className = 'status-message error';
         }
