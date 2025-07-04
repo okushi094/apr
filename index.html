@@ -483,16 +483,26 @@
                 aiResponse = '3cm';
             } else {
                 try {
-                    // ユーザーメッセージを履歴に追加
-                    chatHistory.push({ role: "user", parts: [{ text: userText }] });
+                    // chatHistory を Ollama の messages 形式に変換
+                    const ollamaMessages = chatHistory.map(entry => ({
+                        role: entry.role,
+                        content: entry.parts[0].text // Geminiのparts[0].textをOllamaのcontentにマッピング
+                    }));
+                    // 現在のユーザーの発言をメッセージに追加
+                    ollamaMessages.push({ role: "user", content: userText });
 
                     const payload = {
-                        contents: chatHistory // 会話履歴を送信
+                        model: "llama2", // ここにOllamaで実行したいモデル名を設定してください (例: "llama2", "mistral", "gemma")
+                        messages: ollamaMessages,
+                        stream: false // ストリーミングではなく、完全な応答を受け取る
                     };
 
-                    const apiKey = ""; // APIキーはCanvasによって自動的に提供されます
-                    // Llama APIのエンドポイントに置き換える場合はここを変更します
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    // OllamaのローカルAPIエンドポイント
+                    // !!! 重要: CORSの問題を避けるため、Ollamaを起動する前に
+                    //     export OLLAMA_ORIGINS="https://あなたのGitHubPagesのドメイン"
+                    //     (例: export OLLAMA_ORIGINS="https://your-username.github.io")
+                    //     のように環境変数を設定してください。
+                    const apiUrl = `http://localhost:11434/api/chat`; 
 
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -502,18 +512,16 @@
 
                     const result = await response.json();
 
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        aiResponse = result.candidates[0].content.parts[0].text;
+                    if (result.message && result.message.content) {
+                        aiResponse = result.message.content;
                     } else {
                         aiResponse = '(AIからの応答がありませんでした)';
-                        console.error('AI response error:', result);
+                        console.error('Ollama response error:', result);
                     }
 
                 } catch (error) {
                     console.error('Error sending instruction to AI:', error);
-                    aiResponse = '(AIへの指示送信中にエラーが発生しました)';
+                    aiResponse = '(AIへの指示送信中にエラーが発生しました。Ollamaが起動しているか、CORS設定を確認してください。)';
                 }
             }
             
