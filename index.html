@@ -176,7 +176,7 @@
             border-color: #6366f1;
         }
 
-        /* アクションボタン (録音, AIへ送信, Bluetooth接続) */
+        /* アクションボタン (録音, Bluetooth接続) */
         .action-buttons {
             display: flex;
             justify-content: center; /* ボタンを水平中央に配置 */
@@ -408,12 +408,7 @@
                     <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.2-3c0 3.53-2.91 6.4-6.2 6.4S4.8 14.53 4.8 11H3c0 4.07 3.06 7.44 7 7.93V22h4v-3.07c3.94-.49 7-3.86 7-7.93h-1.8z"/></svg>
                     Record
                 </button>
-                <button id="sendToAIButton" class="action-btn">
-                    <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.01 21.01c-.01 0-.01-.01 0-.01L2 21l.01-.01L19 12 2.01 3l-.01.01C2 3 2 3 2 3.01l7 8-7 8z"/>
-                    </svg>
-                    Send to AI
-                </button>
+                <!-- Send to AI ボタンは削除されました -->
                 <button id="connectBluetoothButton" class="action-btn">
                     <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M17.71 7.29a.996.996 0 00-1.41 0L12 11.59 7.71 7.29a.996.996 0 00-1.41 0c-.39.39-.39 1.02 0 1.41L10.59 13 6.29 17.29c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L12 14.41l4.29 4.29c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L13.41 13l4.29-4.29c.39-.39.39-1.02 0-1.41z"/>
@@ -436,7 +431,7 @@
         // DOM要素の取得
         const recordButton = document.getElementById('recordButton');
         const stopButtonLarge = document.getElementById('stopButtonLarge');
-        const sendToAIButton = document.getElementById('sendToAIButton');
+        // const sendToAIButton = document.getElementById('sendToAIButton'); // Send to AI ボタンは削除されました
         const connectBluetoothButton = document.getElementById('connectBluetoothButton'); // Bluetooth接続ボタン
         const transcriptTextarea = document.getElementById('transcript');
         const statusMessage = document.getElementById('status');
@@ -466,7 +461,6 @@
             currentTranscript = ''; // 送信後、次のユーザー入力のためにクリア
 
             // ボタンを無効化し、ローディングメッセージを表示
-            sendToAIButton.disabled = true;
             recordButton.disabled = true; // AI処理中は録音も停止
             connectBluetoothButton.disabled = true; // Bluetoothボタンも無効化
             statusMessage.textContent = 'AIが応答中...';
@@ -535,7 +529,6 @@
             statusMessage.textContent = 'AI応答完了！';
             statusMessage.className = 'status-message success';
             
-            sendToAIButton.disabled = false;
             recordButton.disabled = false; // ボタンを再度有効化
             connectBluetoothButton.disabled = false; // Bluetoothボタンを再度有効化
 
@@ -654,12 +647,6 @@
                 }
             });
 
-            // Send to AIボタンのクリックイベント (手動送信の場合)
-            sendToAIButton.addEventListener('click', async () => {
-                // 手動送信の場合は、テキストエリアの現在の内容を送信対象とする
-                await sendInstructionToAI(transcriptTextarea.value.trim());
-            });
-
             // Bluetooth接続ボタンのクリックイベント
             connectBluetoothButton.addEventListener('click', async () => {
                 try {
@@ -712,7 +699,7 @@
             // Web Speech APIがサポートされていない場合
             recordButton.disabled = true;
             stopButtonLarge.disabled = true;
-            sendToAIButton.disabled = true;
+            // sendToAIButton.disabled = true; // ボタンが削除されたため不要
             connectBluetoothButton.disabled = true; // Bluetoothボタンも無効化
             statusMessage.textContent = 'お使いのブラウザはWeb Speech APIまたはWeb Bluetooth APIをサポートしていません。Google Chromeなどの最新ブラウザをご利用ください。';
             statusMessage.className = 'status-message error';
