@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声文字起こしアプリ</title>
+    <title>ボイスカーコントロール</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -35,7 +35,6 @@
             overflow-y: auto;
             box-sizing: border-box;
         }
- 
         /* Header */
         .header {
             padding: 20px 25px 15px;
@@ -52,7 +51,6 @@
             color: #1a202c;
             text-align: center;
         }
- 
         /* Main content area */
         .main-content {
             flex-grow: 1;
@@ -94,7 +92,6 @@
             width: 100%;
             flex-shrink: 0;
         }
- 
         /* Sound wave visualizer */
         .sound-wave-visualizer {
             width: 180px;
@@ -124,7 +121,6 @@
             0%, 100% { transform: scale(0.9); opacity: 0.8; }
             50% { transform: scale(1.0); opacity: 1; }
         }
- 
         /* Large Stop Button */
         .stop-button-large {
             background-color: #ef4444;
@@ -155,7 +151,6 @@
             box-shadow: none;
             transform: none;
         }
- 
         /* Text area */
         textarea {
             width: 100%;
@@ -175,7 +170,6 @@
             outline: none;
             border-color: #6366f1;
         }
- 
         /* Action buttons (record, bluetooth connect) */
         .action-buttons {
             display: flex;
@@ -227,7 +221,6 @@
         .action-btn#connectBluetoothButton svg {
             color: #3b82f6;
         }
- 
         /* Bottom navigation bar */
         .bottom-nav {
             background-color: #ffffff;
@@ -263,7 +256,6 @@
         .nav-item.active svg {
             color: #ef4444;
         }
- 
         /* Status message */
         .status-message {
             font-size: 0.85rem;
@@ -291,7 +283,6 @@
             background-color: #e0f7fa;
             color: #00838f;
         }
- 
         /* Responsive adjustments for smaller screens */
         @media (max-width: 768px) {
             body {
@@ -380,29 +371,24 @@
     <div class="app-container">
         <!-- Header -->
         <div class="header">
-            <span class="title">音声文字起こしアプリ</span>
+            <span class="title">ボイスカーコントロール</span>
         </div>
- 
         <!-- Main Content -->
         <div class="main-content">
             <div class="profile-section">
                 <div class="profile-icon">
                     <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
                 </div>
-                <span class="voice-recognition-text">Voice Recognition</span>
+                <span class="voice-recognition-text">音声認識</span>
             </div>
- 
             <div id="soundWaveVisualizer" class="sound-wave-visualizer">
                 <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 18h2V6H6v12zm4 0h2V6h-2v12zm4 0h2V6h-2v12zm4 0h2V6h-2v12z"/>
                 </svg>
             </div>
- 
             <!-- Large Stop Button - Visible only when recording -->
             <button id="stopButtonLarge" class="stop-button-large">停止</button>
- 
-            <textarea id="transcript" placeholder="ここに文字起こしされたテキストが表示されます..." class="shadow-inner"></textarea>
- 
+            <textarea id="transcript" placeholder="ここに音声コマンドが表示されます..." class="shadow-inner" readonly></textarea>
             <div class="action-buttons">
                 <button id="recordButton" class="action-btn">
                     <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.2-3c0 3.53-2.91 6.4-6.2 6.4S4.8 14.53 4.8 11H3c0 4.07 3.06 7.44 7 7.93V22h4v-3.07c3.94-.49 7-3.86 7-7.93h-1.8z"/></svg>
@@ -417,17 +403,15 @@
             </div>
             <p id="status" class="status-message info">準備完了</p>
         </div>
- 
         <div class="bottom-nav">
             <div class="nav-item active">
                 <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.2-3c0 3.53-2.91 6.4-6.2 6.4S4.8 14.53 4.8 11H3c0 4.07 3.06 7.44 7 7.93V22h4v-3.07c3.94-.49 7-3.86 7-7.93h-1.8z"/></svg>
-                <span>録音</span>
+                <span>制御</span>
             </div>
         </div>
     </div>
- 
     <script>
-        // DOM要素の取得
+        // DOM element retrieval
         const recordButton = document.getElementById('recordButton');
         const stopButtonLarge = document.getElementById('stopButtonLarge');
         const connectBluetoothButton = document.getElementById('connectBluetoothButton');
@@ -435,159 +419,45 @@
         const statusMessage = document.getElementById('status');
         const soundWaveVisualizer = document.getElementById('soundWaveVisualizer');
  
-        // Web Speech APIの初期化
+        // Web Speech API initialization
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         let isRecognizing = false;
         let currentTranscript = '';
-        let chatHistory = [];
  
-        // Bluetooth関連のグローバル変数
+        // Bluetooth related global variables
         let bluetoothDevice = null;
-        let gpioCharacteristic = null;
+        let rxCharacteristic = null;
  
-        /**
-         * 指示をAIに送信し、応答を処理します。
-         * @param {string} userText - ユーザーの音声入力テキスト。
-         */
-        async function sendInstructionToAI(userText) {
-            if (!userText) {
-                statusMessage.textContent = 'AIに送るテキストがありません。';
-                statusMessage.className = 'status-message error';
+        // Function to send a command via Bluetooth
+        async function sendCarCommand(command) {
+            if (!rxCharacteristic) {
+                statusMessage.textContent = 'Bluetoothデバイスが接続されていません。';
+                statusMessage.className = 'status-message info';
+                console.error('Bluetooth characteristic is not available.');
                 return;
             }
  
-            // UIを更新
-            transcriptTextarea.value = userText + '\n\nAIが応答中...';
-            currentTranscript = '';
-            recordButton.disabled = true;
-            connectBluetoothButton.disabled = true;
-            statusMessage.textContent = 'AIが応答中...';
-            statusMessage.className = 'status-message info';
- 
-            let aiResponse = '';
- 
             try {
-                // Gemini APIに送信するプロンプトを構築
-                const prompt = `あなたはロボットカーの制御システムです。以下のユーザーからの指示を解析し、適切なコマンドをJSON形式で出力してください。出力はJSONオブジェクトのみとし、説明文は含めないでください。
-コマンドは以下の中から選んでください:
-- FORWARD: 前進
-- BACKWARD: 後退
-- TURN_LEFT: 左に曲がる
-- TURN_RIGHT: 右に曲がる
-- STOP: 停止
-- GREET: 挨拶
- 
-もし指示に方向や距離が含まれている場合、その値をJSONに含めてください。
-例：
-ユーザー: "前進して" -> {"command": "FORWARD"}
-ユーザー: "左に5cm動いて" -> {"command": "TURN_LEFT", "value": "5cm"}
-ユーザー: "止まって" -> {"command": "STOP"}
-ユーザー: "こんにちは" -> {"command": "GREET"}
- 
-ユーザーの指示: "${userText}"`;
- 
-                const payload = {
-                    contents: [{
-                        role: "user",
-                        parts: [{ text: prompt }]
-                    }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "command": { "type": "STRING" },
-                                "value": { "type": "STRING" }
-                            },
-                            "propertyOrdering": ["command", "value"]
-                        }
-                    }
-                };
-               
-                const apiKey = ""; // Canvas環境で自動で提供されます
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
- 
-                let response = null;
-                let retries = 0;
-                const maxRetries = 5;
-                const baseDelay = 1000;
- 
-                while (retries < maxRetries) {
-                    try {
-                        response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
- 
-                        if (response.status === 429) {
-                            const delay = baseDelay * Math.pow(2, retries);
-                            retries++;
-                            console.warn(`API呼び出しがレート制限されました。${delay / 1000}秒後に再試行します...`);
-                            await new Promise(res => setTimeout(res, delay));
-                        } else if (!response.ok) {
-                            throw new Error(`HTTPエラー! ステータス: ${response.status}`);
-                        } else {
-                            break; // 成功
-                        }
-                    } catch (error) {
-                        if (retries < maxRetries - 1) {
-                            const delay = baseDelay * Math.pow(2, retries);
-                            retries++;
-                            console.error(`API呼び出しエラー: ${error.message}。${delay / 1000}秒後に再試行します...`);
-                            await new Promise(res => setTimeout(res, delay));
-                        } else {
-                            throw error; // 再試行回数が上限に達したらエラーを投げる
-                        }
-                    }
-                }
- 
-                if (!response || !response.ok) {
-                    throw new Error("API呼び出しが失敗しました。");
-                }
-               
-                const result = await response.json();
-                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) {
-                    throw new Error("AIから有効なJSON応答がありませんでした。");
-                }
-               
-                const parsedJson = JSON.parse(jsonText);
-                const command = parsedJson.command;
-                const value = parsedJson.value || '';
-                aiResponse = JSON.stringify(parsedJson, null, 2);
- 
-                if (gpioCharacteristic) {
-                    const dataToSend = `${command}${value ? ' ' + value : ''}`;
-                    const encoder = new TextEncoder('utf-8');
-                    await gpioCharacteristic.writeValue(encoder.encode(dataToSend));
-                    statusMessage.textContent = `Bluetoothで "${dataToSend}" を送信しました。`;
-                    statusMessage.className = 'status-message bluetooth';
-                    console.log('Sent over Bluetooth:', dataToSend);
-                } else {
-                    statusMessage.textContent = 'Bluetoothデバイスが接続されていません。';
-                    statusMessage.className = 'status-message info';
-                }
- 
+                // The ESP32 sketch expects a single character string representing the command
+                const dataToSend = String(command);
+                const encoder = new TextEncoder('utf-8');
+                await rxCharacteristic.writeValue(encoder.encode(dataToSend));
+                statusMessage.textContent = `Bluetoothでコマンド "${dataToSend}" を送信しました。`;
+                statusMessage.className = 'status-message bluetooth';
+                console.log('Sent over Bluetooth:', dataToSend);
             } catch (error) {
-                console.error('AIへの指示送信中にエラーが発生しました:', error);
-                aiResponse = `(AIへの指示送信中にエラーが発生しました: ${error.message})`;
-                statusMessage.textContent = `AI処理エラー: ${error.message}`;
+                statusMessage.textContent = `Bluetooth送信エラー: ${error.message}`;
                 statusMessage.className = 'status-message error';
+                console.error('Bluetooth write error:', error);
             }
- 
-            // UIを元に戻す
-            transcriptTextarea.value = userText + '\n\nAI応答: \n' + aiResponse;
-            transcriptTextarea.scrollTop = transcriptTextarea.scrollHeight;
-            recordButton.disabled = false;
-            connectBluetoothButton.disabled = false;
         }
  
-        if (SpeechRecognition) {
+        // Check if Web Speech and Web Bluetooth APIs are supported
+        if (SpeechRecognition && navigator.bluetooth) {
             recognition = new SpeechRecognition();
-            recognition.continuous = false; // 文が終わるごとに結果を確定
-            recognition.interimResults = false;
+            recognition.continuous = true;
+            recognition.interimResults = true;
             recognition.lang = 'ja-JP';
  
             recognition.onstart = () => {
@@ -596,14 +466,37 @@
                 recordButton.style.display = 'none';
                 stopButtonLarge.style.display = 'block';
                 soundWaveVisualizer.classList.add('active');
-                statusMessage.textContent = '録音中... 指示を話してください';
+                statusMessage.textContent = '録音中... 話し始めてください';
                 statusMessage.className = 'status-message success';
             };
  
             recognition.onresult = (event) => {
-                const result = event.results[event.results.length - 1][0].transcript;
-                transcriptTextarea.value = result;
-                sendInstructionToAI(result);
+                let latestFinalSegment = '';
+ 
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        latestFinalSegment += transcript;
+                    }
+                }
+ 
+                if (latestFinalSegment) {
+                    currentTranscript += latestFinalSegment.trim() + ' ';
+                    transcriptTextarea.value = currentTranscript;
+                    transcriptTextarea.scrollTop = transcriptTextarea.scrollHeight;
+ 
+                    // Check for commands and send via Bluetooth
+                    const cleanedText = latestFinalSegment.trim().toLowerCase();
+                    if (cleanedText.includes('前進') || cleanedText.includes('まえにすすんで')) {
+                        sendCarCommand(1);
+                    } else if (cleanedText.includes('止まれ') || cleanedText.includes('ストップ')) {
+                        sendCarCommand(0);
+                    } else if (cleanedText.includes('左') || cleanedText.includes('ひだり')) {
+                        sendCarCommand(2);
+                    } else if (cleanedText.includes('右') || cleanedText.includes('みぎ')) {
+                        sendCarCommand(3);
+                    }
+                }
             };
  
             recognition.onend = () => {
@@ -623,6 +516,11 @@
                 statusMessage.textContent = `エラーが発生しました: ${event.error}`;
                 statusMessage.className = 'status-message error';
                 console.error('Speech recognition error:', event.error);
+                if (event.error === 'no-speech' || event.error === 'audio-capture') {
+                    statusMessage.textContent = 'マイクが検出されないか、音声が小さすぎます。マイクの設定を確認してください。';
+                } else if (event.error === 'not-allowed') {
+                    statusMessage.textContent = 'マイクの使用が許可されていません。ブラウザの設定を確認してください。';
+                }
             };
  
             recordButton.addEventListener('click', () => {
@@ -649,18 +547,14 @@
                     statusMessage.className = 'status-message bluetooth';
                     connectBluetoothButton.disabled = true;
                    
-                    // BluetoothデバイスのUUIDはご自身のデバイスに合わせて修正してください。
-                    // 例: ESP32やHC-05などのBluetoothモジュールのサービスUUID
-                    const serviceUuid = '0000ffe0-0000-1000-8000-00805f9b34fb'; // UARTサービスUUID
-                    const characteristicUuid = '0000ffe1-0000-1000-8000-00805f9b34fb'; // UARTキャラクタリスティックUUID
+                    // Use the UUIDs from the ESP32 sketch
+                    const serviceUuid = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+                    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
  
+                    // Request a Bluetooth device with the specified service
                     const options = {
-                        // 特定のサービスUUIDを持つデバイスのみをフィルタリング
                         filters: [{ services: [serviceUuid] }],
-                        // サービスのUUIDをoptionalServicesにも含めることで、後でアクセス可能になります
-                        optionalServices: [serviceUuid]
                     };
- 
                     bluetoothDevice = await navigator.bluetooth.requestDevice(options);
  
                     statusMessage.textContent = `${bluetoothDevice.name || '不明なデバイス'} に接続中...`;
@@ -668,32 +562,32 @@
  
                     const server = await bluetoothDevice.gatt.connect();
                     const service = await server.getPrimaryService(serviceUuid);
-                    gpioCharacteristic = await service.getCharacteristic(characteristicUuid);
+                    rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
  
                     statusMessage.textContent = `${bluetoothDevice.name || '不明なデバイス'} に接続しました！`;
                     statusMessage.className = 'status-message success';
                     console.log('Connected to Bluetooth device:', bluetoothDevice.name);
  
                     bluetoothDevice.addEventListener('gattserverdisconnected', () => {
-                        gpioCharacteristic = null;
+                        rxCharacteristic = null;
                         bluetoothDevice = null;
                         statusMessage.textContent = 'Bluetoothデバイスが切断されました。';
                         statusMessage.className = 'status-message info';
                         connectBluetoothButton.disabled = false;
                         console.log('Bluetooth device disconnected.');
                     });
+ 
                 } catch (error) {
                     let errorMessage;
                     if (error.name === 'NotFoundError') {
                         errorMessage = '対応するデバイスが見つかりませんでした。UUIDが正しいか、デバイスが有効になっているか確認してください。';
                     } else if (error.name === 'NotAllowedError') {
-                        errorMessage = 'Bluetoothの使用が許可されていません。ブラウザの設定を確認してください。';
+                        errorMessage = 'Bluetoothの使用が許可されていません。ブラウザの設定で位置情報とBluetoothの権限を許可してください。';
                     } else if (error.name === 'AbortError') {
                         errorMessage = 'ユーザーがデバイス選択をキャンセルしました。';
                     } else {
                         errorMessage = `Bluetooth接続エラー: ${error.message}`;
                     }
- 
                     statusMessage.textContent = errorMessage;
                     statusMessage.className = 'status-message error';
                     console.error('Bluetooth connection error:', error);
