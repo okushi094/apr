@@ -1,266 +1,371 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32音声制御</title>
-    <!-- Tailwind CSSをCDNから読み込み、美しいUIを作成 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Interフォントを読み込み -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-4 min-h-screen flex flex-col items-center justify-center">
+import React, { useState, useEffect } from 'react';
+import {
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  PermissionsAndroid,
+  ActivityIndicator,
+} from 'react-native';
+import Voice from '@react-native-voice/voice';
+import BleManager from 'react-native-ble-manager';
 
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-lg w-full max-w-sm">
-        <!-- アプリケーションタイトル -->
-        <h1 class="text-3xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">音声でESP32を制御</h1>
-        
-        <!-- 接続ボタン -->
-        <button id="connectButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full transition-all duration-300 transform active:scale-95 shadow-lg mb-4">
-            ESP32に接続
-        </button>
+const SERVICE_UUID = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E';
+const CHARACTERISTIC_UUID_RX = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E';
+const DEVICE_NAME = 'ESP32-Car';
 
-        <!-- 音声コマンドボタン -->
-        <button id="voiceButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-full transition-all duration-300 transform active:scale-95 shadow-lg" disabled>
-            <svg class="inline-block w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm7 5a1 1 0 011-1h2a1 1 0 011 1v2.586a1 1 0 01-.293.707l-3 3A1 1 0 0113 15h-1a1 1 0 01-1-1v-2a1 1 0 011-1h1zm-7 0a1 1 0 011-1h1a1 1 0 011 1v2a1 1 0 01-1 1h-1a1 1 0 01-1-1v-2zM4 11a1 1 0 011-1h1a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2z" clip-rule="evenodd"></path>
-                <path d="M11 16a3 3 0 10-2 0v2a1 1 0 102 0v-2z"></path>
-            </svg>
-            音声コマンドを開始
-        </button>
+// 音声コマンドとESP32のコマンド値のマッピング
+const COMMANDS = {
+  '進む': '1',
+  '進んで': '1',
+  '前進': '1',
+  '止まれ': '0',
+  '止まって': '0',
+  'ストップ': '0',
+  '左': '2',
+  '左に寄せて': '2',
+  '右': '3',
+  '右に寄せて': '3',
+};
 
-        <!-- ステータス表示エリア -->
-        <div class="mt-6 space-y-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl">
-            <div class="flex items-center">
-                <span class="font-semibold text-gray-600 dark:text-gray-400">ステータス:</span>
-                <span id="status" class="ml-2 text-red-500 font-medium">切断済み</span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-semibold text-gray-600 dark:text-gray-400">認識した音声:</span>
-                <!-- 音声テキスト表示エリア -->
-                <span id="recognizedText" class="ml-2 text-gray-900 dark:text-gray-100">---</span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-semibold text-gray-600 dark:text-gray-400">送信コマンド:</span>
-                <span id="sentCommand" class="ml-2 text-gray-900 dark:text-gray-100">---</span>
-            </div>
-        </div>
+// メインアプリケーションコンポーネント
+const App = () => {
+  const [device, setDevice] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [isMicReady, setIsMicReady] = useState(false);
 
-        <!-- エラーメッセージ表示エリア -->
-        <div id="messageBox" class="mt-6 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-2xl hidden transition-all duration-300">
-            <p id="messageText"></p>
-        </div>
-    </div>
-
-    <script>
-        // UUIDはESP32のコードに合わせて定義
-        // Web Bluetoothの仕様に合わせて小文字に修正
-        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-        const CHARACTERISTIC_UUID_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-        const CHARACTERISTIC_UUID_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-
-        // UI要素
-        const connectButton = document.getElementById('connectButton');
-        const voiceButton = document.getElementById('voiceButton');
-        const statusElement = document.getElementById('status');
-        const recognizedTextElement = document.getElementById('recognizedText');
-        const sentCommandElement = document.getElementById('sentCommand');
-        const messageBox = document.getElementById('messageBox');
-        const messageText = document.getElementById('messageText');
-
-        let device;
-        let rxCharacteristic;
-
-        // 音声認識APIの準備
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            // 連続認識を無効化
-            recognition.continuous = false; 
-            // 中間結果を表示する
-            recognition.interimResults = true; 
-            recognition.lang = 'ja-JP'; // 日本語を設定
+  // マイクのパーミッションをリクエスト
+  useEffect(() => {
+    const requestMicrophonePermission = async () => {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'マイクの許可',
+            message: '音声認識のためにマイクの使用を許可してください',
+            buttonNeutral: '後で',
+            buttonNegative: '拒否',
+            buttonPositive: '許可',
+          },
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('マイクの許可がされました');
+          setIsMicReady(true);
         } else {
-            showMessage("エラー: お使いのブラウザは音声認識をサポートしていません。最新のAndroid Chromeで試してください。");
-            voiceButton.disabled = true;
+          console.log('マイクの許可が拒否されました');
         }
+      } catch (err) {
+        console.warn(err);
+      }
+    };
+    requestMicrophonePermission();
+  }, []);
 
-        // コマンドと値の対応
-        const commandMap = {
-            "進んで": 1,
-            "止まって": 0,
-            "左へ": 2,
-            "右へ": 3,
-            "前へ": 1,
-            "ストップ": 0,
-            "左": 2,
-            "右": 3,
-        };
-        
-        /**
-         * メッセージボックスにエラーを表示する
-         * @param {string} msg - 表示するメッセージ
-         */
-        function showMessage(msg) {
-            messageText.textContent = msg;
-            messageBox.classList.remove('hidden');
-        }
+  // BLEマネージャーと音声認識の初期化
+  useEffect(() => {
+    BleManager.start({ showAlert: false }).then(() => {
+      console.log('BleManager initialized');
+    });
 
-        /**
-         * UIのステータスを更新する
-         * @param {string} statusMsg - ステータス
-         * @param {string} color - 色 (Tailwindクラス)
-         */
-        function updateStatus(statusMsg, color) {
-            statusElement.textContent = statusMsg;
-            statusElement.className = `ml-2 font-medium text-${color}-500`;
-        }
-        
-        /**
-         * BLEデバイスに接続する
-         */
-        connectButton.addEventListener('click', async () => {
-            updateStatus('接続中...', 'yellow');
-            try {
-                // サービスUUIDとデバイス名でフィルタリング
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'ESP32-Car' }],
-                    optionalServices: [SERVICE_UUID]
-                });
-                
-                // GATTサーバーに接続
-                const server = await device.gatt.connect();
-                // サービスの取得
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                // 受信用の特性（Characteristic）を取得
-                rxCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID_RX);
+    Voice.onSpeechResults = (e) => {
+      if (e.value && e.value.length > 0) {
+        const text = e.value[0];
+        setRecognizedText(text);
+        console.log('認識されたテキスト:', text);
+        sendCommand(text);
+      }
+    };
 
-                // 接続完了
-                updateStatus('接続済み', 'green');
-                voiceButton.disabled = false;
-                connectButton.textContent = '再接続';
-                showMessage("接続が完了しました！「音声コマンドを開始」ボタンを押して話しかけてください。");
-                
-                // 切断時のイベントを監視
-                device.addEventListener('gattserverdisconnected', onDisconnected);
+    Voice.onSpeechError = (e) => {
+      console.error('音声認識エラー:', e);
+      setIsListening(false);
+    };
 
-            } catch (error) {
-                console.error('BLE接続エラー:', error);
-                updateStatus('接続失敗', 'red');
-                showMessage(`接続エラー: ${error.message}`);
-                voiceButton.disabled = true;
-            }
+    Voice.onSpeechEnd = () => {
+      setIsListening(false);
+      console.log('音声認識終了');
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, []);
+
+  // BLEスキャン処理
+  const startScan = () => {
+    if (isScanning) return;
+
+    setIsScanning(true);
+    setDevice(null);
+    setIsConnected(false);
+    console.log('BLEスキャン開始');
+
+    BleManager.scan([], 5, true)
+      .then(() => {
+        console.log('スキャン開始しました');
+      })
+      .catch((err) => {
+        console.error('スキャンエラー:', err);
+      });
+  };
+
+  // BLEデバイス発見時の処理
+  useEffect(() => {
+    const handleDiscoverPeripheral = (peripheral) => {
+      console.log('発見したデバイス:', peripheral.name, peripheral.id);
+      if (peripheral.name === DEVICE_NAME) {
+        setDevice(peripheral);
+        console.log('目的のデバイスを発見しました:', peripheral.name);
+        BleManager.stopScan().then(() => {
+          setIsScanning(false);
+          console.log('スキャンを停止しました');
+          connectToDevice(peripheral);
         });
+      }
+    };
 
-        /**
-         * BLEデバイスから切断された時の処理
-         */
-        function onDisconnected() {
-            console.log('BLEデバイスが切断されました');
-            updateStatus('切断済み', 'red');
-            voiceButton.disabled = true;
-            showMessage('ESP32との接続が切れました。再度「ESP32に接続」ボタンを押してください。');
+    const handleStopScan = () => {
+      console.log('スキャンが停止しました');
+      setIsScanning(false);
+    };
+
+    BleManager.start().then(() => {
+      BleManager.getConnectedPeripherals([]).then((peripherals) => {
+        if (peripherals.length > 0) {
+          // 既に接続されている場合
+          const connectedDevice = peripherals.find(p => p.name === DEVICE_NAME);
+          if (connectedDevice) {
+            setDevice(connectedDevice);
+            setIsConnected(true);
+            console.log('既に接続されています:', connectedDevice.name);
+          } else {
+            startScan();
+          }
+        } else {
+          startScan();
         }
+      });
+    });
 
-        /**
-         * 音声コマンドを開始する
-         */
-        voiceButton.addEventListener('click', () => {
-            if (!rxCharacteristic) {
-                showMessage("ESP32に接続していません。まず接続してください。");
-                return;
-            }
-            recognizedTextElement.textContent = "聴取中...";
-            sentCommandElement.textContent = "---";
-            messageBox.classList.add('hidden');
-            // 音声認識を開始する前にマイクの許可をリクエストする
-            if (recognition) {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(() => {
-                        recognition.start();
-                    })
-                    .catch(e => {
-                        // マイクアクセスエラーの場合のメッセージをより具体的に修正
-                        showMessage("マイクへのアクセスが拒否されました。このページが**HTTPS**で提供されているか確認してください。");
-                        console.error('マイクアクセスエラー:', e);
-                    });
-            } else {
-                 showMessage("エラー: 音声認識が利用できません。");
-            }
+    const listeners = [
+      BleManager.addListener('BleManagerDiscoverPeripheral', handleDiscoverPeripheral),
+      BleManager.addListener('BleManagerStopScan', handleStopScan),
+    ];
+
+    return () => {
+      for (const listener of listeners) {
+        listener.remove();
+      }
+    };
+  }, []);
+
+  // デバイスへの接続処理
+  const connectToDevice = async (peripheral) => {
+    if (isConnecting) return;
+
+    setIsConnecting(true);
+    console.log('接続開始:', peripheral.id);
+    try {
+      await BleManager.connect(peripheral.id);
+      console.log('接続成功');
+      setIsConnected(true);
+    } catch (error) {
+      console.error('接続エラー:', error);
+      setIsConnected(false);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // 音声認識の開始
+  const startListening = async () => {
+    if (!isConnected) {
+      console.warn('BLEデバイスが接続されていません');
+      return;
+    }
+    if (isListening) return;
+    
+    setRecognizedText('');
+    setIsListening(true);
+    try {
+      await Voice.start('ja-JP');
+      console.log('音声認識を開始しました');
+    } catch (e) {
+      console.error('音声認識開始エラー:', e);
+      setIsListening(false);
+    }
+  };
+
+  // コマンドの送信
+  const sendCommand = (text) => {
+    const commandValue = findCommand(text);
+    if (commandValue === null) {
+      console.log('有効なコマンドが見つかりませんでした');
+      return;
+    }
+    const data = Buffer.from(commandValue, 'ascii');
+    console.log(`コマンドを送信: ${commandValue}`);
+    if (device) {
+      BleManager.write(device.id, SERVICE_UUID, CHARACTERISTIC_UUID_RX, data)
+        .then(() => {
+          console.log('コマンド送信成功');
+        })
+        .catch((error) => {
+          console.error('コマンド送信エラー:', error);
         });
+    }
+  };
 
-        /**
-         * 音声認識の結果を処理する
-         */
-        recognition.onresult = async (event) => {
-            // 中間結果と最終結果を分けるための変数
-            let interimTranscript = '';
-            let finalTranscript = '';
-            
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript.trim();
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-            
-            // 中間結果をリアルタイムで表示
-            recognizedTextElement.textContent = interimTranscript;
+  // テキストからコマンドを探す
+  const findCommand = (text) => {
+    const normalizedText = text.trim();
+    for (const key in COMMANDS) {
+      if (normalizedText.includes(key)) {
+        return COMMANDS[key];
+      }
+    }
+    return null;
+  };
 
-            // 最終結果がある場合はコマンドを送信
-            if (finalTranscript !== '') {
-                console.log('認識した最終音声:', finalTranscript);
-                let commandValue = commandMap[finalTranscript];
-                if (commandValue !== undefined) {
-                    console.log(`コマンドを送信: ${commandValue}`);
-                    await sendData(commandValue);
-                } else {
-                    sentCommandElement.textContent = "コマンドなし";
-                    showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
-                }
-                recognizedTextElement.textContent = finalTranscript; // 最終結果を確定表示
-            }
-        };
-        
-        /**
-         * 音声認識でエラーが発生した場合の処理
-         */
-        recognition.onerror = (event) => {
-            console.error('音声認識エラー:', event.error);
-            recognizedTextElement.textContent = "---";
-            if (event.error === 'not-allowed') {
-                 // 音声認識エラーの場合のメッセージも具体的に修正
-                 showMessage("マイクへのアクセスが拒否されました。このページが**HTTPS**で提供されているか確認してください。");
-            } else {
-                 showMessage(`音声認識エラー: ${event.error}`);
-            }
-        };
+  const renderConnectionStatus = () => {
+    if (isScanning || isConnecting) {
+      return (
+        <View style={styles.statusContainer}>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.statusText}>接続中...</Text>
+        </View>
+      );
+    }
+    if (isConnected) {
+      return (
+        <View style={[styles.statusContainer, { backgroundColor: '#4CAF50' }]}>
+          <Text style={styles.statusText}>接続済み</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.statusContainer, { backgroundColor: '#F44336' }]}>
+        <Text style={styles.statusText}>未接続</Text>
+      </View>
+    );
+  };
 
-        /**
-         * ESP32へデータを送信する
-         * @param {number} value - 送信するコマンドの値
-         */
-        async function sendData(value) {
-            try {
-                if (rxCharacteristic) {
-                    const data = new Uint8Array([value]);
-                    await rxCharacteristic.writeValue(data);
-                    sentCommandElement.textContent = value;
-                    console.log(`コマンド値 ${value} を正常に送信しました`);
-                }
-            } catch (error) {
-                console.error('BLE書き込みエラー:', error);
-                showMessage(`BLE書き込みエラー: ${error.message}`);
-            }
-        }
-    </script>
-</body>
-</html>
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>音声制御カー</Text>
+        {renderConnectionStatus()}
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.recognizedTextTitle}>認識されたテキスト:</Text>
+        <Text style={styles.recognizedText}>{recognizedText || '音声コマンドを入力してください'}</Text>
+        <TouchableOpacity
+          style={[
+            styles.micButton,
+            { backgroundColor: isListening ? '#f00' : '#4CAF50' },
+          ]}
+          onPress={startListening}
+          disabled={!isConnected || isListening}
+        >
+          {isListening ? (
+            <Text style={styles.micButtonText}>聞取り中...</Text>
+          ) : (
+            <Text style={styles.micButtonText}>マイク</Text>
+          )}
+        </TouchableOpacity>
+        {isListening && <ActivityIndicator size="large" color="#4CAF50" style={styles.listeningIndicator} />}
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          音声コマンド: 進む, 止まる, 左, 右
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+};
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#1E88E5',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statusContainer: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontSize: 16,
+    color: '#fff',
+    marginLeft: 5,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  recognizedTextTitle: {
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 10,
+  },
+  recognizedText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  micButton: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  micButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  listeningIndicator: {
+    marginTop: 20,
+  },
+  footer: {
+    padding: 20,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#888',
+  },
+});
+
+export default App;
