@@ -40,11 +40,12 @@
                 <span class="font-semibold text-gray-600 dark:text-gray-400">ステータス:</span>
                 <span id="status" class="ml-2 text-red-500 font-medium">切断済み</span>
             </div>
-            <div class="flex items-center">
+            <!-- 新しい文字起こしボックス -->
+            <div>
                 <span class="font-semibold text-gray-600 dark:text-gray-400">認識した音声:</span>
-                <!-- 音声テキスト表示エリア -->
-                <span id="recognizedText" class="ml-2 text-gray-900 dark:text-gray-100">---</span>
+                <div id="recognizedText" class="mt-2 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 min-h-[4rem]">---</div>
             </div>
+            <!-- 送信コマンド -->
             <div class="flex items-center">
                 <span class="font-semibold text-gray-600 dark:text-gray-400">送信コマンド:</span>
                 <span id="sentCommand" class="ml-2 text-gray-900 dark:text-gray-100">---</span>
@@ -62,7 +63,7 @@
         // Web Bluetoothの仕様に合わせて小文字に修正
         const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
         const CHARACTERISTIC_UUID_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-        const CHARACTERISTIC_UUID_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHARACTERISTIC_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
         // UI要素
         const connectButton = document.getElementById('connectButton');
@@ -199,33 +200,28 @@
          * 音声認識の結果を処理する
          */
         recognition.onresult = async (event) => {
-            // 中間結果と最終結果を分けるための変数
-            let interimTranscript = '';
-            let finalTranscript = '';
-            
+            let recognizedText = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript.trim();
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-            
-            // 中間結果をリアルタイムで表示
-            recognizedTextElement.textContent = interimTranscript;
+                // 中間結果を即座に表示
+                recognizedText += event.results[i][0].transcript;
+                recognizedTextElement.textContent = recognizedText;
 
-            // 最終結果がある場合はコマンドを送信
-            if (finalTranscript !== '') {
-                console.log('認識した最終音声:', finalTranscript);
-                let commandValue = commandMap[finalTranscript];
-                if (commandValue !== undefined) {
-                    console.log(`コマンドを送信: ${commandValue}`);
-                    await sendData(commandValue);
-                } else {
-                    sentCommandElement.textContent = "コマンドなし";
-                    showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
+                // 最終結果がある場合はコマンドを送信
+                if (event.results[i].isFinal) {
+                    let finalTranscript = recognizedText.trim();
+                    console.log('認識した最終音声:', finalTranscript);
+                    let commandValue = commandMap[finalTranscript];
+                    if (commandValue !== undefined) {
+                        console.log(`コマンドを送信: ${commandValue}`);
+                        await sendData(commandValue);
+                        sentCommandElement.textContent = commandValue;
+                    } else {
+                        sentCommandElement.textContent = "コマンドなし";
+                        showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
+                    }
+                    // 最終結果を確定表示
+                    recognizedTextElement.textContent = finalTranscript;
                 }
-                recognizedTextElement.textContent = finalTranscript; // 最終結果を確定表示
             }
         };
         
@@ -252,7 +248,6 @@
                 if (rxCharacteristic) {
                     const data = new Uint8Array([value]);
                     await rxCharacteristic.writeValue(data);
-                    sentCommandElement.textContent = value;
                     console.log(`コマンド値 ${value} を正常に送信しました`);
                 }
             } catch (error) {
@@ -263,4 +258,3 @@
     </script>
 </body>
 </html>
-
