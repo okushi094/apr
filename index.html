@@ -1,80 +1,265 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>ESP32-Car 音声制御</title>
-<style>
-    body { font-family: sans-serif; padding: 20px; }
-    button { margin: 5px; padding: 10px; font-size: 16px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>音声→AI判定→BLE送信（ESP32）</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#9ca3af; --accent:#22d3ee; }
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    .wrap{max-width:900px;margin:24px auto;padding:16px}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:16px}
+    h1{font-size:20px;margin:0 0 12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    button{appearance:none;border:1px solid #334155;background:#0b1020;color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+    button.primary{background:linear-gradient(90deg,#06b6d4,#22d3ee);color:#001018;border:none}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #334155;border-radius:999px;background:#0b1020;color:var(--muted);font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:860px){.grid{grid-template-columns:1.1fr .9fr}}
+    textarea, input[type="text"]{width:100%;background:#0b1020;border:1px solid #334155;color:var(--ink);padding:10px;border-radius:10px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    .status{font-size:13px;color:var(--muted)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:8px;background:#02222a;border:1px solid #0b3a45;color:#98f1ff;font-size:12px}
+    .cmd{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border:1px dashed #334155;border-radius:10px}
+    .log{min-height:140px;white-space:pre-wrap}
+    .ok{color:#86efac}
+    .warn{color:#fde047}
+    .err{color:#fca5a5}
+  </style>
 </head>
 <body>
-<h1>ESP32-Car 音声制御</h1>
-<button id="connect">ESP32-Carに接続</button>
-<button id="start-rec">音声認識開始</button>
-<p id="status">未接続</p>
-<p id="result">音声入力: </p>
- 
+  <div class="wrap">
+    <div class="card">
+      <h1>Androidの音声をテキスト化 → AIでコマンド判定 → BLEでESP32へ送信</h1>
+
+      <div class="row" style="margin-bottom:12px">
+        <button id="btnConnect" class="primary">① ESP32 と BLE 接続</button>
+        <span class="pill">サービスUUID: <span class="mono">6E400001-B5A3-F393-E0A9-E50E24DCCA9E</span></span>
+        <span class="pill">送信先（RX）: <span class="mono">6E400002-B5A3-F393-E0A9-E50E24DCCA9E</span></span>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <div class="status">接続状態: <span id="bleState" class="badge">未接続</span></div>
+            <div class="row">
+              <button id="btnStart">② 音声認識 開始</button>
+              <button id="btnStop">停止</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <label>認識テキスト（自動更新）</label>
+            <textarea id="transcript" rows="5" placeholder="ここに音声の文字起こしが表示されます"></textarea>
+          </div>
+
+          <div class="row" style="margin-top:8px">
+            <div class="cmd">AI判定: <strong id="aiDecision">—</strong></div>
+            <div class="cmd">送信コード: <strong id="sendCode" class="mono">—</strong></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="status">手動入力 / デバッグ</div>
+          <div style="margin-top:8px">
+            <input id="manual" type="text" placeholder="例: 進んで / ストップ / 左に寄せて / 右に寄せて" />
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button data-test="進んで">進んで</button>
+            <button data-test="ストップ">ストップ</button>
+            <button data-test="左に寄せて">左に寄せて</button>
+            <button data-test="右に寄せて">右に寄せて</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="btnManualSend">手動テキストをAI判定→送信</button>
+            <button id="btnSendRaw1">数値1(前進)を直接送信</button>
+            <button id="btnSendRaw0">数値0(停止)を直接送信</button>
+          </div>
+          <div style="margin-top:12px">
+            <div class="status">ログ</div>
+            <div id="log" class="log"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="status">サポート語彙（例）</div>
+        <p style="margin-top:6px">
+          <span class="cmd">前進: 「進んで」「前に進んで」「前進」「進め」</span>
+          <span class="cmd">停止: 「ストップ」「止まって」「停止」</span>
+          <span class="cmd">左: 「左に寄せて」「左へ曲がって」</span>
+          <span class="cmd">右: 「右に寄せて」「右へ曲がって」</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"; // ESP32側と一致
-    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; // ESP32側と一致
- 
-    let device, server, characteristic;
- 
-    // --- ESP32-Carに接続 ---
-    document.getElementById("connect").onclick = async () => {
-      try {
-        device = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'ESP32-Car' }],   // ← 名前フィルタに変更
-          optionalServices: [SERVICE_UUID]
-        });
-        server = await device.gatt.connect();
-        const service = await server.getPrimaryService(SERVICE_UUID);
-        characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
- 
-        document.getElementById("status").textContent = "接続しました: " + device.name;
-      } catch (error) {
-        console.error(error);
-        document.getElementById("status").textContent = "接続失敗: " + error;
-      }
+    // ====== 設定（ESP32 側のUUID） ======
+    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"; // 小文字でもOK
+    const RX_CHAR_UUID  = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Webから書き込む先
+
+    // ====== BLE状態 ======
+    let bleDevice = null;
+    let bleServer = null;
+    let rxChar = null; // Write用
+
+    const $ = (sel)=>document.querySelector(sel);
+    const $$ = (sel)=>document.querySelectorAll(sel);
+    const log = (msg, cls="")=>{
+      const el = document.createElement('div');
+      if(cls) el.className = cls;
+      el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      document.getElementById('log').prepend(el);
     };
- 
-    // --- 音声認識開始 ---
-    document.getElementById("start-rec").onclick = () => {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("このブラウザは音声認識に対応していません");
+
+    const setState = (txt)=>{ document.getElementById('bleState').textContent = txt; };
+    const setAI = (label)=>{ document.getElementById('aiDecision').textContent = label; };
+    const setCode = (code)=>{ document.getElementById('sendCode').textContent = code; };
+
+    // ====== BLE 接続 ======
+    async function connectBLE(){
+      try{
+        if(!navigator.bluetooth){
+          alert('このブラウザはWeb Bluetoothに未対応です。Chrome for Androidをお使いください。');
+          return;
+        }
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters:[{ name: "ESP32-Car" }],
+          optionalServices:[SERVICE_UUID]
+        });
+        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        bleServer = await bleDevice.gatt.connect();
+        const svc = await bleServer.getPrimaryService(SERVICE_UUID);
+        rxChar = await svc.getCharacteristic(RX_CHAR_UUID);
+        setState('接続中');
+        log('GATT接続に成功');
+        setState('接続済み');
+      }catch(err){
+        console.error(err); log(`接続エラー: ${err}`, 'err'); setState('未接続');
+      }
+    }
+
+    function onDisconnected(){
+      setState('未接続');
+      log('切断されました', 'warn');
+    }
+
+    async function sendNumber(code){
+      if(!rxChar){ log('未接続のため送信できません', 'warn'); return; }
+      try{
+        const payload = new TextEncoder().encode(String(code));
+        if(rxChar.writeValueWithoutResponse){
+          await rxChar.writeValueWithoutResponse(payload);
+        }else{
+          await rxChar.writeValue(payload);
+        }
+        log(`送信: ${code}`,'ok');
+        setCode(code);
+      }catch(err){
+        console.error(err); log(`送信エラー: ${err}`, 'err');
+      }
+    }
+
+    // ====== 簡易AI（ルール + 正規表現マッチ） ======
+    // ESP32側コード定義と一致させる
+    const COMMAND = { STOP:0, FORWARD:1, LEFT:2, RIGHT:3 };
+
+    function decideCommandJa(text){
+      if(!text) return {label:'—', code:null};
+      const t = text.replace(/\s+/g,'').toLowerCase();
+
+      // 前進
+      const fwd = [ /進んで?/, /前に?進(んで|め)/, /前進/, /進め/ ];
+      if(fwd.some(rx=>rx.test(t))) return {label:'前進', code:COMMAND.FORWARD};
+
+      // 停止
+      const stop = [ /ストップ/, /止まって?/, /停止/, /止めて?/ ];
+      if(stop.some(rx=>rx.test(t))) return {label:'停止', code:COMMAND.STOP};
+
+      // 左
+      const left = [ /左.*寄せ/, /左(へ|に)?(曲がって?|寄せて?|向けて?)/, /左/ ];
+      if(left.some(rx=>rx.test(t))) return {label:'左', code:COMMAND.LEFT};
+
+      // 右
+      const right= [ /右.*寄せ/, /右(へ|に)?(曲がって?|寄せて?|向けて?)/, /右/ ];
+      if(right.some(rx=>rx.test(t))) return {label:'右', code:COMMAND.RIGHT};
+
+      return {label:'不明', code:null};
+    }
+
+    async function handleTextAndSend(text){
+      $('#transcript').value = text;
+      const d = decideCommandJa(text);
+      setAI(d.label);
+      if(d.code===null){
+        log(`AI判定: 不明（送信しません）`,'warn');
         return;
       }
- 
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = "ja-JP";
-      recognition.continuous = false;
-      recognition.interimResults = false;
- 
-      recognition.start();
- 
-      recognition.onresult = async (event) => {
-        const text = event.results[0][0].transcript;
-        document.getElementById("result").textContent = "音声入力: " + text;
- 
-        let commandValue = 0;
-        if (text.includes("前")) commandValue = 1;
-        else if (text.includes("止")) commandValue = 2;
-        else if (text.includes("左")) commandValue = 3;
-        else if (text.includes("右")) commandValue = 4;
- 
-        if (characteristic && commandValue > 0) {
-          const data = new Uint8Array([commandValue]);
-          await characteristic.writeValue(data);
-          document.getElementById("status").textContent = "送信: " + commandValue;
+      await sendNumber(d.code);
+    }
+
+    // ====== 音声認識（Web Speech API） ======
+    let recog = null;
+    let recognizing = false;
+
+    function setupSpeech(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR){
+        alert('このブラウザはWeb Speech APIに未対応です。Chrome for Android を使用してください。');
+        return null;
+      }
+      const r = new SR();
+      r.lang = 'ja-JP';
+      r.continuous = true;
+      r.interimResults = true;
+
+      r.onstart = ()=>{ recognizing = true; log('音声認識 開始','ok'); };
+      r.onend = ()=>{ recognizing = false; log('音声認識 停止','warn'); };
+      r.onerror = (e)=>{ log(`音声エラー: ${e.error}`,'err'); };
+      r.onresult = (ev)=>{
+        let finalText = '';
+        let interimText = '';
+        for(let i = ev.resultIndex; i < ev.results.length; i++){
+          const res = ev.results[i];
+          if(res.isFinal){ finalText += res[0].transcript; }
+          else { interimText += res[0].transcript; }
         }
+        if(interimText){ $('#transcript').value = interimText + ' …'; }
+        if(finalText){ handleTextAndSend(finalText.trim()); }
       };
- 
-      recognition.onerror = (event) => {
-        console.error(event);
-        document.getElementById("status").textContent = "音声認識エラー";
-      };
-    };
-</script>
+      return r;
+    }
+
+    // ====== イベント結線 ======
+    document.getElementById('btnConnect').addEventListener('click', connectBLE);
+
+    document.getElementById('btnStart').addEventListener('click', ()=>{
+      if(!recog) recog = setupSpeech();
+      if(recog && !recognizing) recog.start();
+    });
+    document.getElementById('btnStop').addEventListener('click', ()=>{
+      if(recog && recognizing) recog.stop();
+    });
+
+    document.getElementById('btnManualSend').addEventListener('click', ()=>{
+      const t = document.getElementById('manual').value.trim();
+      handleTextAndSend(t);
+    });
+
+    document.getElementById('btnSendRaw1').addEventListener('click', ()=> sendNumber(1));
+    document.getElementById('btnSendRaw0').addEventListener('click', ()=> sendNumber(0));
+
+    $$('button[data-test]').forEach(b=>{
+      b.addEventListener('click', ()=> handleTextAndSend(b.getAttribute('data-test')));
+    });
+
+    // ====== ページ読み込み時の注意 ======
+    window.addEventListener('load', ()=>{
+      log('ヒント: HTTPSで開くとWeb Bluetooth/音声認識が安定します','warn');
+    });
+  </script>
 </body>
 </html>
