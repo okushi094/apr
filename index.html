@@ -178,14 +178,14 @@
             sentCommandElement.textContent = "---";
             messageBox.classList.add('hidden');
             if (recognition) {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(() => {
-                        recognition.start();
-                    })
-                    .catch(e => {
-                        showMessage("マイクへのアクセスが拒否されました。このページが**HTTPS**で提供されているか確認してください。");
-                        console.error('マイクアクセスエラー:', e);
-                    });
+                // 💡修正: navigator.mediaDevices.getUserMedia()の呼び出しを削除し、
+                // SpeechRecognition.start()にマイクの許可処理を任せる
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error('音声認識開始エラー:', e);
+                    showMessage(`音声認識開始エラー: ${e.message}`);
+                }
             } else {
                  showMessage("エラー: 音声認識が利用できません。");
             }
@@ -194,68 +194,4 @@
         /**
          * 音声認識の結果を処理する
          */
-        recognition.onresult = async (event) => {
-            let recognizedText = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    // 最終的な結果の場合はコマンドを送信
-                    let finalTranscript = event.results[i][0].transcript.trim();
-                    console.log('認識した最終音声:', finalTranscript);
-                    let commandValue = commandMap[finalTranscript];
-                    if (commandValue !== undefined) {
-                        console.log(`コマンドを送信: ${commandValue}`);
-                        await sendData(commandValue);
-                    } else {
-                        // コマンドに一致しない場合でも、UIには表示
-                        sentCommandElement.textContent = "コマンドなし";
-                        showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
-                    }
-                } else {
-                    // 中間結果は文字起こしとして表示
-                    recognizedText += event.results[i][0].transcript;
-                }
-            }
-            recognizedTextElement.textContent = recognizedText;
-        };
-
-        // 音声認識が終了したら自動的に再開する
-        recognition.onend = () => {
-             if (rxCharacteristic) {
-                 recognition.start();
-             }
-        };
-
-        /**
-         * 音声認識でエラーが発生した場合の処理
-         */
-        recognition.onerror = (event) => {
-            console.error('音声認識エラー:', event.error);
-            recognizedTextElement.textContent = "---";
-            if (event.error === 'not-allowed') {
-                 // 音声認識エラーの場合のメッセージも具体的に修正
-                 showMessage("マイクへのアクセスが拒否されました。このページが**HTTPS**で提供されているか確認してください。");
-            } else {
-                 showMessage(`音声認識エラー: ${event.error}`);
-            }
-        };
-
-        /**
-         * ESP32へデータを送信する
-         * @param {number} value - 送信するコマンドの値
-         */
-        async function sendData(value) {
-            try {
-                if (rxCharacteristic) {
-                    const data = new Uint8Array([value]);
-                    await rxCharacteristic.writeValue(data);
-                    sentCommandElement.textContent = value;
-                    console.log(`コマンド値 ${value} を正常に送信しました`);
-                }
-            } catch (error) {
-                console.error('BLE書き込みエラー:', error);
-                showMessage(`BLE書き込みエラー: ${error.message}`);
-            }
-        }
-    </script>
-</body>
-</html>
+        recognit
