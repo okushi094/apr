@@ -81,8 +81,10 @@
         let recognition = null;
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = true; // 連続認識を有効にする
-            recognition.interimResults = true; // 中間結果を表示する
+            // 連続認識を無効化
+            recognition.continuous = false; 
+            // 中間結果を表示する
+            recognition.interimResults = true; 
             recognition.lang = 'ja-JP'; // 日本語を設定
         } else {
             showMessage("エラー: お使いのブラウザは音声認識をサポートしていません。最新のAndroid Chromeで試してください。");
@@ -197,36 +199,36 @@
          * 音声認識の結果を処理する
          */
         recognition.onresult = async (event) => {
-            let recognizedText = '';
+            // 中間結果と最終結果を分けるための変数
+            let interimTranscript = '';
+            let finalTranscript = '';
+            
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
-                    // 最終的な結果の場合はコマンドを送信
-                    let finalTranscript = event.results[i][0].transcript.trim();
-                    console.log('認識した最終音声:', finalTranscript);
-                    let commandValue = commandMap[finalTranscript];
-                    if (commandValue !== undefined) {
-                        console.log(`コマンドを送信: ${commandValue}`);
-                        await sendData(commandValue);
-                    } else {
-                        // コマンドに一致しない場合でも、UIには表示
-                        sentCommandElement.textContent = "コマンドなし";
-                        showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
-                    }
+                    finalTranscript += event.results[i][0].transcript.trim();
                 } else {
-                    // 中間結果は文字起こしとして表示
-                    recognizedText += event.results[i][0].transcript;
+                    interimTranscript += event.results[i][0].transcript;
                 }
             }
-            recognizedTextElement.textContent = recognizedText;
-        };
+            
+            // 中間結果をリアルタイムで表示
+            recognizedTextElement.textContent = interimTranscript;
 
-        // 音声認識が終了したら自動的に再開する
-        recognition.onend = () => {
-             if (rxCharacteristic) {
-                 recognition.start();
-             }
+            // 最終結果がある場合はコマンドを送信
+            if (finalTranscript !== '') {
+                console.log('認識した最終音声:', finalTranscript);
+                let commandValue = commandMap[finalTranscript];
+                if (commandValue !== undefined) {
+                    console.log(`コマンドを送信: ${commandValue}`);
+                    await sendData(commandValue);
+                } else {
+                    sentCommandElement.textContent = "コマンドなし";
+                    showMessage(`「${finalTranscript}」というコマンドは認識できませんでした。`);
+                }
+                recognizedTextElement.textContent = finalTranscript; // 最終結果を確定表示
+            }
         };
-
+        
         /**
          * 音声認識でエラーが発生した場合の処理
          */
